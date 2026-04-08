@@ -26,6 +26,7 @@ import process from 'node:process';
 import { WebSocket } from 'ws';
 import { runClaudeCli } from './runtimes/claude-cli.js';
 import { runOpenclaw } from './runtimes/openclaw.js';
+import { runDocker } from './runtimes/docker.js';
 
 const CONFIG_PATH = process.env.CONCLAVE_CONFIG
   || path.join(os.homedir(), '.conclave', 'node.json');
@@ -56,6 +57,7 @@ const CAPACITY = Number.isFinite(config.capacity) ? config.capacity : 1;
 const RUNNERS = {
   'claude-cli': (payload, onLog) => runClaudeCli(payload, onLog, config),
   'openclaw':   (payload, onLog) => runOpenclaw(payload, onLog, config),
+  'docker':     (payload, onLog) => runDocker(payload, onLog, config),
 };
 
 let ws = null;
