@@ -4,6 +4,29 @@
 >
 > Status: WIP. Original popebot README below.
 
+## What's wired up
+
+| Path | Status | How |
+|---|---|---|
+| Agent jobs (`createAgentJob` → coding-agent container) | ✅ Dispatchable to remote nodes | `CONCLAVE_DISPATCH_AGENT_JOB=auto` (default), shared spec via `buildAgentJobContainerSpec` |
+| Lightweight `claude -p` jobs on a node | ✅ `runtime: claude-cli` | Uses the worker host's local Claude install/auth |
+| OpenClaw forwarding | ✅ `runtime: openclaw` | Worker POSTs to a local OpenClaw gateway |
+| Cluster roles | ❌ **Not dispatched — see below** | Architectural blocker |
+| Interactive code workspaces | ❌ Not dispatched | ttyd/long-lived; needs different transport semantics |
+| Headless `command/*` runtimes | ❌ Not dispatched | Same workspace coupling as interactive |
+
+## Why cluster roles aren't dispatchable (yet)
+
+Cluster roles use a **shared filesystem** to pass state between the central server and the worker container. The central writes `system-prompt.md`, `user-prompt.md`, `meta.json`, `trigger.json` to `data/clusters/cluster-{id}/role-{id}/...`, bind-mounts that directory into the container at `/home/coding-agent/workspace`, and the cluster-worker entrypoint reads the files from inside.
+
+Agent jobs work for remote dispatch because they use **git** as their state-passing mechanism — the worker just clones the `agent-job/{id}` branch. Cluster roles can't use the same trick without either:
+
+1. A shared filesystem mounted on every worker (NFS/syncthing/operator-provisioned) — fragile, easy to misconfigure.
+2. A file-sync layer in conclave itself that ships the role's directory to the worker before each run and pulls results back — its own subsystem, real engineering.
+3. Redesigning cluster roles to pass their state via the dispatch payload (env vars + inline content) instead of via files — invasive popebot core change.
+
+For now: clusters keep running locally on the central server. Agent jobs are the "fleet does real work" path.
+
 ---
 
 # ThePopeBot
