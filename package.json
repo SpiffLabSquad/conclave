@@ -125,8 +125,10 @@
     }
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.2",
     "drizzle-kit": "^0.31.9",
-    "esbuild": "^0.27.3"
+    "esbuild": "^0.27.3",
+    "tailwindcss": "^4.2.2"
   },
   "engines": {
     "node": ">=18.0.0"

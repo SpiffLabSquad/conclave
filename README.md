@@ -15,6 +15,45 @@
 | Interactive code workspaces | ❌ Not dispatched | ttyd/long-lived; needs different transport semantics |
 | Headless `command/*` runtimes | ❌ Not dispatched | Same workspace coupling as interactive |
 
+## How to run the fork
+
+Conclave keeps upstream popebot's deployment model: the npm package is library + CLI only, the Next.js UI lives in a Docker image. Upstream's `docker/event-handler/Dockerfile` installs `thepopebot` from npm, so it can never bake fork code. Conclave ships a parallel `Dockerfile.local` that installs the fork from a local `npm pack` tgz instead, plus a one-shot build script:
+
+```sh
+# Build the conclave event-handler image (≈3 min on a 2GB colima VM)
+./scripts/build-event-handler-image.sh
+# → conclave/event-handler:local
+
+# Run alongside upstream popebot (or by itself):
+mkdir -p ~/popebot-project/{agent-job,event-handler,skills,data,logs}
+cd ~/popebot-project
+echo "AUTH_SECRET=$(openssl rand -base64 32)" > .env
+echo "DATABASE_PATH=data/db/thepopebot.sqlite" >> .env
+echo "AUTH_TRUST_HOST=true" >> .env
+echo "APP_URL=http://192.168.x.x:5050" >> .env
+
+docker run -d --name conclave-eh -p 5050:80 \
+  -v "$(pwd)/agent-job:/app/agent-job" \
+  -v "$(pwd)/event-handler:/app/event-handler" \
+  -v "$(pwd)/skills:/app/skills" \
+  -v "$(pwd)/.env:/app/.env" \
+  -v "$(pwd)/data:/app/data" \
+  -v "$(pwd)/logs:/app/logs" \
+  -v "$(pwd):/project" \
+  conclave/event-handler:local
+```
+
+**Avoid port 5000 on macOS** — AirPlay/AirTunes owns it. Use 5050 or similar.
+
+**Manage nodes via the in-container CLI** to avoid SQLite cross-process locking on the volume-mounted DB:
+
+```sh
+docker exec conclave-eh node /app/node_modules/thepopebot/bin/cli.js node add my-mini --runtimes docker --labels fleet --capacity 2
+docker exec conclave-eh node /app/node_modules/thepopebot/bin/cli.js node list
+```
+
+**Why not just `node web/server.js` from the source repo?** Because the fork's package.json is named `thepopebot`, importing `thepopebot/...` resolves the package's own files in-place — but the Tailwind v4 `@source` directive in `web/app/globals.css` scans `../node_modules/thepopebot/lib/**`, which doesn't exist when *we are* `thepopebot`. Same for the drizzle migrations loader. The Docker build sidesteps both by installing the fork as a real npm package into a clean consumer project.
+
 ## Why cluster roles aren't dispatchable (yet)
 
 Cluster roles use a **shared filesystem** to pass state between the central server and the worker container. The central writes `system-prompt.md`, `user-prompt.md`, `meta.json`, `trigger.json` to `data/clusters/cluster-{id}/role-{id}/...`, bind-mounts that directory into the container at `/home/coding-agent/workspace`, and the cluster-worker entrypoint reads the files from inside.

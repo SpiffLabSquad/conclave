@@ -1,0 +1,16 @@
+node_modules
+.next
+web/.next
+web/node_modules
+data
+logs
+.git
+.github
+*.log
+*.tgz
+!thepopebot-*.tgz
+scripts
+apps/node-worker/node_modules
+docker/coding-agent
+.claude
+.env

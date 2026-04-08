@@ -1,0 +1,52 @@
+# Conclave-flavored event-handler image: ships a PRE-BUILT Next.js bundle.
+#
+# Why pre-built: building Next inside Docker on a 2GB colima VM OOMs. We
+# build on the host instead (where there's plenty of RAM) into a scratch
+# directory laid out exactly like a real popebot consumer project, then
+# COPY the artifacts in here. This image is just the runtime layer.
+#
+# Build:
+#   cd ~/Documents/conclave
+#   npm run build && npm pack
+#   ./scripts/build-event-handler-image.sh
+#
+# (or manually: build /tmp/conclave-builder, then `docker build` here)
+#
+# The build script (or your manual steps) must populate the build context
+# directory at /tmp/conclave-builder/ with the .next bundle and a real
+# node_modules tree (npm install of the fork's tgz + tailwind + next 15
+# + react + next-auth + next-themes). This Dockerfile then COPYs the
+# whole thing into a runtime base.
+
+FROM node:22-bookworm-slim
+
+# build-essential needed to recompile better-sqlite3 native binding for Linux
+# (the host build's arm64 macOS binary won't load).
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl git ca-certificates python3 make g++ && \
+    install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+      -o /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
+    chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+      > /etc/apt/sources.list.d/github-cli.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends gh && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN npm install -g pm2
+
+WORKDIR /app
+
+# All of /tmp/conclave-builder lands at /app: .next, node_modules, server.js,
+# instrumentation.js, middleware.js, next.config.mjs, postcss.config.mjs,
+# package.json. The .env stub from the build is harmless — runtime overrides
+# via the volume-mounted /app/.env.
+COPY . /app
+
+# Recompile native bindings for Linux. The host built better-sqlite3 against
+# macOS so the .node binary's ELF header doesn't match.
+RUN cd /app && npm rebuild better-sqlite3 --build-from-source
+
+EXPOSE 80
+CMD ["pm2-runtime", "--kill-timeout", "120000", "server.js"]
