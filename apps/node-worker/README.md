@@ -52,11 +52,23 @@ You should see `[conclave] connected, sending hello` followed by `[conclave] hel
 
 ### macOS — launchd
 
-Save as `~/Library/LaunchAgents/com.spifflabsquad.conclave-node-worker.plist`, edit the `/PATH/TO/conclave/apps/node-worker/index.js` placeholder, then `launchctl load` it. (Sample plist coming with the v0.2 packaging task.)
+```sh
+./install/install-launchd.sh
+```
 
-### Windows — Service
+Idempotent. Substitutes `node`, the worker dir, and `~/Library/Logs` into `install/com.spifflabsquad.conclave-node-worker.plist.template`, writes it to `~/Library/LaunchAgents/`, and `launchctl bootstrap`s it. Logs at `~/Library/Logs/conclave-node-worker.{out,err}.log`.
 
-Use [`node-windows`](https://github.com/coreybutler/node-windows) to wrap `index.js` as a Windows service. (Sample script coming with v0.2.)
+Uninstall: `./install/uninstall-launchd.sh`
+
+### Windows — Service (via NSSM)
+
+From an elevated PowerShell prompt in this directory:
+
+```powershell
+.\install\install-windows.ps1
+```
+
+Requires NSSM (`choco install nssm` or `scoop install nssm`) and Node ≥ 18 on `PATH`. Service name: `ConclaveNodeWorker`. Logs at `%ProgramData%\conclave\node-worker\{stdout,stderr}.log`. Remove with `nssm stop ConclaveNodeWorker; nssm remove ConclaveNodeWorker confirm`.
 
 ## Status
 

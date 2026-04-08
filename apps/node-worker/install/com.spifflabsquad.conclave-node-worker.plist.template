@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  conclave-node-worker launchd agent.
+
+  install/install-launchd.sh fills in {{NODE_BIN}}, {{WORKER_DIR}}, and
+  {{LOG_DIR}} from the local environment, then writes the result to
+  ~/Library/LaunchAgents/com.spifflabsquad.conclave-node-worker.plist
+  and `launchctl bootstrap`s it. Worker reads ~/.conclave/node.json the
+  same as a manual `node index.js` run.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.spifflabsquad.conclave-node-worker</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{NODE_BIN}}</string>
+        <string>{{WORKER_DIR}}/index.js</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>{{WORKER_DIR}}</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+        <key>NetworkState</key>
+        <true/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>StandardOutPath</key>
+    <string>{{LOG_DIR}}/conclave-node-worker.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>{{LOG_DIR}}/conclave-node-worker.err.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+</dict>
+</plist>
