@@ -63,7 +63,89 @@ Commands:
   sync --fast <path>                Fast sync — copy source into running container, rebuild .next
   set-var <KEY> [VALUE]             Set a GitHub repository variable
   user:password <email>             Change a user's password
+
+Conclave (multi-node fork):
+  node add <name> [opts]            Register a remote worker node. Prints token (shown ONCE).
+                                    Opts: --runtimes a,b,c  --labels a,b,c  --capacity N  --os <darwin|linux|win32>
+  node list                         List all registered nodes
+  node revoke <id|name>             Delete a node (revokes its token)
 `);
+}
+
+// --- conclave node commands ---------------------------------------------
+
+function parseNodeFlags(rest) {
+  const out = { runtimes: ['claude-cli'], labels: [], capacity: 1, os: undefined };
+  for (let i = 0; i < rest.length; i++) {
+    const a = rest[i];
+    const next = () => rest[++i];
+    if (a === '--runtimes') out.runtimes = next().split(',').map(s => s.trim()).filter(Boolean);
+    else if (a === '--labels') out.labels = next().split(',').map(s => s.trim()).filter(Boolean);
+    else if (a === '--capacity') out.capacity = parseInt(next(), 10) || 1;
+    else if (a === '--os') out.os = next();
+    else throw new Error(`unknown flag: ${a}`);
+  }
+  return out;
+}
+
+async function nodeCommand(sub, rest) {
+  // Defer the import so we don't pay DB init cost on unrelated CLI invocations.
+  const { createNode, listNodes, getNodeById, deleteNode } = await import('thepopebot/db/nodes');
+
+  switch (sub) {
+    case 'add': {
+      const name = rest[0];
+      if (!name) {
+        console.error('usage: conclave node add <name> [--runtimes a,b] [--labels a,b] [--capacity N] [--os darwin|linux|win32]');
+        process.exit(1);
+      }
+      const opts = parseNodeFlags(rest.slice(1));
+      const created = createNode({ name, ...opts });
+      console.log('\n  Node registered.\n');
+      console.log(`    id:        ${created.id}`);
+      console.log(`    name:      ${created.name}`);
+      console.log(`    runtimes:  ${opts.runtimes.join(',')}`);
+      console.log(`    labels:    ${opts.labels.join(',') || '(none)'}`);
+      console.log(`    capacity:  ${opts.capacity}`);
+      console.log(`\n  Bearer token (shown ONCE — copy now into ~/.conclave/node.json on the worker):\n`);
+      console.log(`    ${created.token}\n`);
+      return;
+    }
+
+    case 'list': {
+      const rows = listNodes();
+      if (rows.length === 0) { console.log('  (no nodes registered)'); return; }
+      const fmt = (n) => {
+        const seen = n.lastSeen ? new Date(n.lastSeen).toISOString() : '-';
+        return `  ${n.id}  ${n.name.padEnd(20)} ${n.status.padEnd(8)} runtimes=${(n.runtimes||[]).join(',')} labels=${(n.labels||[]).join(',') || '-'} cap=${n.capacity} lastSeen=${seen}`;
+      };
+      console.log('');
+      for (const r of rows) console.log(fmt(r));
+      console.log('');
+      return;
+    }
+
+    case 'revoke': {
+      const target = rest[0];
+      if (!target) { console.error('usage: conclave node revoke <id|name>'); process.exit(1); }
+      // Accept either an exact id or a name match.
+      let id = null;
+      if (getNodeById(target)) {
+        id = target;
+      } else {
+        const match = listNodes().find((n) => n.name === target);
+        if (match) id = match.id;
+      }
+      if (!id) { console.error(`  no node found matching: ${target}`); process.exit(1); }
+      deleteNode(id);
+      console.log(`  revoked ${id}`);
+      return;
+    }
+
+    default:
+      console.error('usage: conclave node <add|list|revoke> ...');
+      process.exit(1);
+  }
 }
 
 /**
@@ -1111,6 +1193,9 @@ switch (command) {
     break;
   case 'user:password':
     await userPassword(args[0]);
+    break;
+  case 'node':
+    await nodeCommand(args[0], args.slice(1));
     break;
   default:
     printUsage();
