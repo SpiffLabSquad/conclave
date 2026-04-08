@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { createServer } from 'http';
 import next from 'next';
 import { attachCodeProxy } from 'thepopebot/code/ws-proxy';
+import { attachHub } from 'thepopebot/transport/hub';
 
 const app = next({ dev: false });
 const handle = app.getRequestHandler();
@@ -18,6 +19,7 @@ app.prepare().then(() => {
   });
 
   attachCodeProxy(server);
+  attachHub(server);
 
   const port = process.env.PORT || 80;
   server.listen(port, () => {

@@ -1,0 +1,20 @@
+{
+  "name": "conclave-node-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Conclave remote worker daemon. Dials out to a central conclave server over WebSocket and runs jobs locally via the claude CLI or a local OpenClaw gateway.",
+  "bin": {
+    "conclave-node-worker": "./index.js"
+  },
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "ws": "^8.19.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

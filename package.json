@@ -1,9 +1,10 @@
 {
   "name": "thepopebot",
-  "version": "1.2.75",
+  "version": "1.2.75-conclave.0",
   "type": "module",
-  "description": "Create autonomous AI agents with a two-layer architecture: Next.js Event Handler + Docker Agent.",
+  "description": "Multi-node fork of thepopebot. Central control plane dispatches Claude/OpenClaw jobs to a fleet of Mac/Windows/Linux worker nodes over WebSocket.",
   "bin": {
+    "conclave": "./bin/cli.js",
     "thepopebot": "./bin/cli.js"
   },
   "main": "api/index.js",
@@ -29,6 +30,8 @@
     "./cluster/stream": "./lib/cluster/stream.js",
     "./containers/stream": "./lib/containers/stream.js",
     "./containers/logs": "./lib/containers/logs.js",
+    "./transport/hub": "./lib/transport/ws-hub.js",
+    "./db/nodes": "./lib/db/nodes.js",
     "./auth/components": "./lib/auth/components/index.js",
     "./middleware": "./lib/auth/middleware.js",
     "./oauth": "./lib/oauth/helper.js",

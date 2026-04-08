@@ -1,3 +1,11 @@
+# Conclave
+
+> **Multi-node fork of [thepopebot](https://github.com/stephengpope/thepopebot).** Conclave keeps popebot's UI, scheduler, and agent model intact and adds a fleet of remote worker **nodes**: a central control plane dispatches Claude or OpenClaw jobs to Mac, Windows, or Linux machines over a persistent WebSocket. One UI, many machines.
+>
+> Status: WIP. Original popebot README below.
+
+---
+
 # ThePopeBot
 
 Build autonomous AI agents that work for you 24/7, individually or in teams.
